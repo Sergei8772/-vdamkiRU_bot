@@ -1,8 +1,12 @@
 import logging
 import os
+import sys
 from typing import Optional, Tuple, List
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+
+# --- Устанавливаем порт для Scalingo ---
+PORT = int(os.environ.get("PORT", 5000))
 
 # Устанавливаем UTC для минимизации задержек
 os.environ['TZ'] = 'UTC'
@@ -14,8 +18,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Конфигурация
-TOKEN = "8236271877:AAHO2Eb6Lakd3gOsvQoS8PGLPTkVwbQHYMY"
+# Конфигурация - токен из переменных окружения
+TOKEN = os.environ.get("TELEGRAM_TOKEN")
+if not TOKEN:
+    print("❌ ERROR: TELEGRAM_TOKEN environment variable is not set!")
+    print("📋 Please set it in Scalingo: scalingo env-set TELEGRAM_TOKEN=your_token_here")
+    sys.exit(1)
 
 # Игровые константы (эмодзи как строки для скорости)
 EMPTY = ' '
@@ -534,11 +542,50 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     """Минимальный обработчик ошибок"""
     logger.error(f"Ошибка: {context.error}")
 
+def start_simple_server():
+    """Простой HTTP сервер для Scalingo health checks"""
+    try:
+        from http.server import HTTPServer, BaseHTTPRequestHandler
+        import threading
+        
+        class HealthHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == '/health':
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(b'OK')
+                else:
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/html')
+                    self.end_headers()
+                    self.wfile.write(b'<html><body><h1>Telegram Checkers Bot is running!</h1></body></html>')
+            
+            def log_message(self, format, *args):
+                pass  # Отключаем логирование запросов
+        
+        server = HTTPServer(('0.0.0.0', PORT), HealthHandler)
+        print(f"✅ Health check server started on port {PORT}")
+        
+        def run_server():
+            server.serve_forever()
+        
+        # Запускаем сервер в отдельном потоке
+        server_thread = threading.Thread(target=run_server, daemon=True)
+        server_thread.start()
+        
+    except Exception as e:
+        print(f"⚠️  Could not start health server: {e}")
+
 def main() -> None:
     """УЛЬТРА-БЫСТРЫЙ ЗАПУСК БОТА"""
-    print("=" * 40)
-    print("🎮 БОТ ДЛЯ РУССКИХ ШАШЕК")
-    print("=" * 40)
+    print("=" * 50)
+    print("🎮 TELEGRAM CHECKERS BOT")
+    print(f"📡 PORT: {PORT}")
+    print("=" * 50)
+    
+    # Запускаем простой HTTP сервер для Scalingo
+    start_simple_server()
     
     # Создание приложения с оптимизированными таймаутами
     app = Application.builder() \
@@ -557,11 +604,12 @@ def main() -> None:
     
     app.add_error_handler(error_handler)
     
-    print("✅ Бот запущен!")
-    print("👉 Отправьте /start в Telegram")
-    print("⚡ Оптимизировано для скорости")
-    print("⏹️  Ctrl+C для остановки")
-    print("=" * 40)
+    print("✅ Bot initialized")
+    print("✅ Health server running")
+    print("👉 Send /start in Telegram")
+    print("⚡ Optimized for speed")
+    print("⏹️  Ctrl+C to stop")
+    print("=" * 50)
     
     # УЛЬТРА-БЫСТРЫЙ ПОЛЛИНГ
     app.run_polling(
