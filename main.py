@@ -665,9 +665,6 @@ async def handle_move(query, args, context: ContextTypes.DEFAULT_TYPE):
                 # ПОПАП-УВЕДОМЛЕНИЕ ОБ ОБЯЗАТЕЛЬНОМ ВЗЯТИИ
                 await query.answer(
                     "⚠️ ОБЯЗАТЕЛЬНОЕ ВЗЯТИЕ!\n\n"
-                    "Вы должны съесть шашку противника.\n\n"
-                    "Эта шашка не может совершить взятие.\n"
-                    "Выберите другую свою шашку, которая может съесть.\n\n"
                     "[OK]",
                     show_alert=True
                 )
@@ -1140,4 +1137,5 @@ def main() -> None:
         traceback.print_exc()
 
 if __name__ == "__main__":
+
     main()
